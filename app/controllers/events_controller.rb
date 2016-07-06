@@ -3,7 +3,11 @@ class EventsController < ApplicationController
     org = Org.find params[:org_id]
     @event = org.events.build event_params
 
-    #also need a way to look up the calling hostname and save into event. Can pull this out of the request object.
+    #TODO move to seperate method
+      #TODO need a way to look up the calling hostname and save into event. 
+      #Can probably pull this out of the request object.
+      #For the moment I'm just going to use the remote IP.
+      @event.hostname = request.remote_ip
 
     respond_to do |format|
       if @event.save
@@ -17,17 +21,22 @@ class EventsController < ApplicationController
   def index
     # binding.pry
     org = Org.find params[:org_id]
-    @events = org.events.last(10) #defaulting to 10 events for now
 
-    #I'd create scopes for each of these on the model
-    #Need query param for number of events
-    #Need query param for reversing chronological
-    #Need query param for limiting to hostname
+    #TODO move this into another method as it doens't all belong in the index controller
+      #TODO create scopes for each of these on the model
+      number = event_params[:number] || 10 #defaulting to 10 events
+      reverse = event_params[:reverse] || nil
+      hostname = event_params[:hostname] || nil
+
+      @events = org.events.last(number)
+      @events = @events.reverse if reverse
+      @evetnts = @events.where(hostname: hostname) if hostname
+
 
     respond_to do |format|
       if org
         format.json { @events }
-        format.html { @events }#just using this for easy visualization. Will remove
+        format.html { @events } #just using this for easy visualization. Will remove
       else
         format.json { "Doh! Can't find that Org."}
         format.html { "Doh! Can't find that Org."}
@@ -38,6 +47,6 @@ class EventsController < ApplicationController
   private
 
   def event_params
-    params.require(:event).permit(:string)
+    params.require(:event).permit(:string, :reverse, :hostname, :number)
   end
 end
